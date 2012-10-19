@@ -292,7 +292,7 @@
 			name: 'Popcorn Inception Plugin',
 			version: '0.1',
 			author: 'Brian Chirls, @bchirls',
-			website: 'http://github.com/brianchirls'
+			website: 'https://github.com/brianchirls/popcorn-inception'
 		},
 		incompatible: function() {
 			return !!navigator.userAgent.match(/iP(od|ad|hone)/i) &&
