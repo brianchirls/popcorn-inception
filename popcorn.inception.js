@@ -45,12 +45,15 @@
 			from, to,
 			duration = Infinity,
 			popcornOptions,
-			targetTime;
+			targetTime,
+			active;
 
 		function seek(time) {
 			function seekWhenReady() {
 				duration = popcorn.duration();
-				popcorn.currentTime(targetTime);
+				if (active) {
+					popcorn.currentTime(targetTime);
+				}
 				popcorn.off('loadedmetadata', seekWhenReady);
 			}
 
@@ -66,6 +69,11 @@
 
 		function playOnStart() {
 			var time = 0;
+
+			if (!active) {
+				return;
+			}
+
 			//if options.sync, advance to appropriate time
 			if (options.sync) {
 				time = me.currentTime() - options.start + from;
@@ -83,8 +91,13 @@
 		}
 
 		function mainVideoSeeking() {
-			popcorn.pause();
 			var time = 0;
+
+			if (!active) {
+				return;
+			}
+			popcorn.pause();
+
 			//if options.sync, advance to appropriate time
 			if (options.sync) {
 				time = me.currentTime() - options.start + from;
@@ -223,6 +236,7 @@
 		return {
 			start: function(event, options) {
 				var time;
+				active = true;
 				base.addClass(container, 'active');
 
 				if (options.sync) {
@@ -237,6 +251,7 @@
 				}
 			},
 			end: function(event, options) {
+				active = false;
 				popcorn.pause();
 				me.off('play', playOnStart);
 
@@ -259,7 +274,7 @@
 			website: 'http://github.com/brianchirls'
 		},
 		incompatible: function() {
-			return navigator.userAgent.match(/iP(od|ad|hone)/i) &&
+			return !!navigator.userAgent.match(/iP(od|ad|hone)/i) &&
 				'Browser is unable to play multiple simultaneous media.';
 		}
 	});
