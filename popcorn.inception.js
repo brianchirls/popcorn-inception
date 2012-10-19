@@ -193,6 +193,8 @@
 			popcorn = Popcorn(media, popcornOptions);
 		}
 
+		options.popcorn = popcorn;
+
 		if (options.controls) {
 			media.controls = true;
 		}
