@@ -57,6 +57,8 @@ Even without the full interactive video features of a Popcorn composition, Popco
 
 By default, the spawned media will play in sync with the main media. To have them play independently, set the `sync` parameter to `false`.
 
+Media elements are rendered without built-in controls, but they may be enabled by setting `controls: true`.
+
 ### Playing a partial clip ###
 
 When a child media clip is loaded into your main composition, by default, the entire clip is played, up to the end of your event.  But you can specify a section of the media, if you don't want to include the whole thing.

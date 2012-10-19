@@ -193,6 +193,10 @@
 			popcorn = Popcorn(media, popcornOptions);
 		}
 
+		if (options.controls) {
+			media.controls = true;
+		}
+
 		if (iframe) {
 			popcorn.on('loadedmetadata', function() {
 				iframe.width = media.videoWidth || media.width;
