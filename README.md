@@ -100,3 +100,7 @@ Popcorn Inception is built with *Popcorn Base*, so any CSS styles can be set on 
 			1: 0
 		}
 	});
+
+### Events ###
+
+You can set the `onStart`, `onEnd`, `onFrame` and `onTeardown` parameters as callback functions, which will be passed the options object, in case you want to perform additional operations after the event is created.
