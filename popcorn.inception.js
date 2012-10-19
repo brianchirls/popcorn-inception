@@ -38,6 +38,7 @@
 		var me = this,
 			popcorn,
 			media,
+			sync = options.sync === undefined ? true : options.sync,
 			container, div, doc, iframe,
 			sources,
 			mediaType,
