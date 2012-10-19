@@ -124,12 +124,6 @@
 			return;
 		}
 
-		//todo: use Popcorn.smart if available
-		mediaType = options.type || guessMediaType(sources);
-		if (!mediaType) {
-			return;
-		}
-
 		//todo: if no sources pass canPlayType, return null
 
 		//todo: add stylesheet with basePlugin
@@ -162,22 +156,41 @@
 			doc = document;
 		}
 
-		media = doc.createElement(mediaType);
-		media.setAttribute('preload', 'auto');
-		Popcorn.forEach(sources, function(url) {
-			var source = doc.createElement('source');
-			//todo: if from/to and mediaType is video|audio, add #t={from},{to}
-			source.setAttribute('src', url);
-			media.appendChild(source);
-		});
-		if (options.poster) {
-			media.setAttribute('poster', options.poster);
+		from = options.from && Math.max(Popcorn.util.toSeconds(options.from), 0) || 0;
+		to = options.to && Popcorn.util.toSeconds(options.to) || Infinity;
+		if (to < from) {
+			to = Infinity;
 		}
-		div.appendChild(media);
 
 		popcornOptions = Popcorn.extend({}, me.options);
 		Popcorn.extend(popcornOptions, options.options || {});
-		popcorn = Popcorn(media, popcornOptions);
+
+		//use Popcorn.smart if available
+		mediaType = options.type || guessMediaType(sources) || '';
+		mediaType = mediaType.toLowerCase();
+		if (mediaType !== 'video' && mediaType !== 'audio' && Popcorn.smart) {
+			popcorn = Popcorn.smart(div, sources, popcornOptions);
+			media = popcorn.media;
+		} else {
+			media = doc.createElement(mediaType || 'video');
+			media.setAttribute('preload', 'auto');
+			Popcorn.forEach(sources, function(url) {
+				var source = doc.createElement('source');
+
+				url += '#t=' + from;
+				if (to < Infinity) {
+					url += ',' + to;
+				}
+
+				source.setAttribute('src', url);
+				media.appendChild(source);
+			});
+			if (options.poster) {
+				media.setAttribute('poster', options.poster);
+			}
+			div.appendChild(media);
+			popcorn = Popcorn(media, popcornOptions);
+		}
 
 		if (iframe) {
 			popcorn.on('loadedmetadata', function() {
@@ -186,21 +199,16 @@
 			});
 		}
 
-		if (options.from > 0) {
-			from = options.from;
+		if (from > 0) {
 			seek(from);
-		} else {
-			from = 0;
 		}
 
-		if (options.to > Math.max(0, from)) {
-			to = options.to;
+		if (to < Infinity) {
 			popcorn.cue(to, function() {
 				popcorn.pause();
 			});
-		} else {
-			to = Infinity;
 		}
+
 		popcorn.on('loadedmetadata', function() {
 			to = Math.min(to, popcorn.duration());
 			to = Math.min(to, from + (options.end - options.start));
