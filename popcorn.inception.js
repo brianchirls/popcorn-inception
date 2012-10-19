@@ -245,14 +245,26 @@
 					me.on('seeked', mainVideoSeeked);
 				}
 
+				for (i in Popcorn.registryByName) {
+					popcorn.enable(i);
+				}
+
 				me.on('play', playOnStart);
 				if (!me.paused()) {
 					playOnStart();
 				}
 			},
 			end: function(event, options) {
+				var i;
+
 				active = false;
 				popcorn.pause();
+
+				//in case there are any lingering popcorn events
+				for (i in Popcorn.registryByName) {
+					popcorn.disable(i);
+				}
+
 				me.off('play', playOnStart);
 
 				base.removeClass(container, 'active');
