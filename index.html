@@ -23,6 +23,10 @@
 				margin: 0 auto;
 				width: 800px;
 			}
+
+			a {
+				color: black;
+			}
 		</style>
 	</head>
 	<body>
@@ -38,6 +42,8 @@
 		<script type="text/javascript" src="lib/popcorn.compatible.js"></script>
 		<script type="text/javascript" src="lib/popcorn-base.js"></script>
 		<script type="text/javascript" src="lib/popcorn.style.js"></script>
+		<script type="text/javascript" src="lib/popcorn.loudness.js"></script>
+		<script type="text/javascript" src="lib/popcorn.typist.js"></script>
 		<script type="text/javascript" src="popcorn.inception.js"></script>
 		<script type="text/javascript">
 		(function(){
@@ -91,6 +97,19 @@
 				width: '35%'
 			});
 
+			popcorn.loudness({
+				start: 5,
+				end: 30,
+				volume: {
+					from: 1,
+					0.04: 0.4,
+					0.8: 0.4,
+					0.96: 0.5,
+					to: 1,
+					timing: 'ease'
+				}
+			});
+
 			popcorn.inception({
 				start: 5,
 				end: 30,
@@ -124,6 +143,35 @@
 							0.1: '40%',
 							timing: 'ease-in'
 						}
+					},
+					{
+						_type: 'typist',
+						start: 17,
+						end: 25,
+						html: '<a href="https://github.com/brianchirls/popcorn-inception">github.com/brianchirls/popcorn-inception</a>',
+						target: 'video-container',
+						progress: {
+							from: 0,
+							0.2: 1,
+							to: 1
+						},
+						'font-size': '12px',
+						'font-weight': 'bold',
+						'background-color': 'rgba(255, 255, 255, 0.5)',
+						'padding': '4px',
+						left: {
+							from: '65%',
+							0.15: '65%',
+							0.5: '20%',
+							timing: 'ease-in-out-circ'
+						},
+						top: {
+							from: '60%',
+							0.07: '60%',
+							0.5: '20%',
+							timing: 'ease-in-out-circ'
+						}
+
 					},
 					{
 						_type: 'inception',
