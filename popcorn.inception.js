@@ -120,7 +120,7 @@
 		}
 
 		//todo: don't require options.source if null player is available
-		sources = base.toArray(options.source);
+		sources = base.toArray(options.source, /[\n\r]+/);
 		if (!sources || !sources.length) {
 			return;
 		}
