@@ -77,3 +77,26 @@ It is usually a good idea to have the length of the clip match the length of the
 
 ### Loading up Popcorn events ###
 
+### Animation ###
+
+Popcorn Inception is built with *Popcorn Base*, so any CSS styles can be set on the element containing the media as options on the event, and most of these can be animated with optional keyframes. See [detailed instructions](https://github.com/brianchirls/popcorn-base/#animate-param-options).
+
+	popcorn.inception({
+		start: 0,
+		end: 10,
+		url: 'videos/myvideo.webm',
+
+		// animate video position from left to right and back again
+		left: {
+			0: '10%',
+			0.5: '50%',
+			1: '100%'
+		},
+		top: '10%',
+
+		//fade out at the end
+		opacity: {
+			0.9: 1,
+			1: 0
+		}
+	});
