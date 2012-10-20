@@ -77,6 +77,58 @@ It is usually a good idea to have the length of the clip match the length of the
 
 ### Loading up Popcorn events ###
 
+To load up Popcorn events on other plugins that synchronize with the spawned media, pass them as an array on the `events` parameter. Each event is an object like what is normally passed to Popcorn, but with the additional `_type` parameter to specify which plugin to use.
+
+	popcorn.inception({
+		start: 0,
+		end: 10,
+		url: 'videos/myvideo.webm',
+		id: 'subclip'
+		events: [
+			{
+				_type: 'subtitle',
+				start: 2,
+				end: 6,
+				text: 'Hello world!'
+			}
+		]
+	});
+
+In the above example, the optional `id` parameter is added, which sets the id on the `<div>` containing the video. The subtitle event inside has the `target` parameter set by default to that container element, so it is possible to leave it out, even though most Popcorn plugins require it. However, it is possible to override the default and set the `target` to whatever you want.
+
+Since Popcorn Inception works like any other plugin, it is possible to embed compositions within compositions, as many levels deep as your computer can handle.
+
+	popcorn.inception({
+		start: 0,
+		end: 10,
+		url: 'videos/one.webm',
+		events: [
+			{
+				_type: 'inception',
+				start: 2,
+				end: 8,
+				url: 'videos/two.webm',
+				events: [
+					{
+						_type: 'inception',
+						start: 0,
+						end: 6,
+						url: 'videos/three.webm',
+						events: [
+							{
+								_type: 'subtitle',
+								start: 1,
+								end: 5,
+								text: 'Hello world!'
+							}
+						]
+					}
+				]
+			}
+		]
+	});
+
+
 ### Animation ###
 
 Popcorn Inception is built with *Popcorn Base*, so any CSS styles can be set on the element containing the media as options on the event, and most of these can be animated with optional keyframes. See [detailed instructions](https://github.com/brianchirls/popcorn-base/#animate-param-options).
