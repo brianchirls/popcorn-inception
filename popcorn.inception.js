@@ -225,6 +225,12 @@
 
 		//set up popcorn events
 		if (options.events) {
+			for (i in Popcorn.registryByName) {
+				popcorn.defaults(i, {
+					target: div
+				});
+			}
+
 			if (Popcorn.isArray(options.events)) {
 				for (i = 0; i < options.events.length; i++) {
 					evt = options.events[i];
