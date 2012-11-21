@@ -230,6 +230,7 @@
 				popcorn.defaults(i, {
 					target: div
 				});
+				popcorn.disable(i);
 			}
 
 			if (Popcorn.isArray(options.events)) {
@@ -247,7 +248,7 @@
 					if (Popcorn.registryByName[eventType]) {
 						events = options.events[eventType];
 						for (i = 0; i < events.length; i++) {
-							evt = eventsp[i];
+							evt = events[i];
 							popcorn[eventType](evt);
 						}
 					}
