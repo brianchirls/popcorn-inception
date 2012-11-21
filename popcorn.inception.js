@@ -134,8 +134,8 @@
 			styleSheet.appendChild(
 				document.createTextNode(
 					'.popcorn-inception { display: none; }\n' +
-					'.popcorn-inception > div { position: relative; }\n' +
-					'.popcorn-inception > div > * { max-width: 100%; }\n' +
+					'.popcorn-inception > div.popcorn-inception-container { position: relative; }\n' +
+					'.popcorn-inception > div.popcorn-inception-container > * { max-width: 100%; }\n' +
 					'.popcorn-inception.active { display: inline-block; }\n'
 			));
 			document.head.appendChild(styleSheet);
