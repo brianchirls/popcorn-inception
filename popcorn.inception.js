@@ -1,8 +1,8 @@
 // PLUGIN: inception
 
-(function (Popcorn) {
+(function (window, Popcorn, undefined) {
 
-	"use strict";
+	'use strict';
 
 	var styleSheet,
 		mediaTypes = {
@@ -147,6 +147,7 @@
 		}
 		base.animate(container);
 		div = document.createElement(options.tag || 'div');
+		div.className = 'popcorn-inception-container';
 		container.appendChild(div);
 
 		if (div.tagName === 'IFRAME') {
@@ -306,9 +307,84 @@
 			author: 'Brian Chirls, @bchirls',
 			website: 'https://github.com/brianchirls/popcorn-inception'
 		},
+		options: {
+			start: {
+				elem: 'input',
+				type: 'number',
+				label: 'Start',
+				units: 'seconds'
+			},
+			end: {
+				elem: 'input',
+				type: 'number',
+				label: 'End',
+				units: 'seconds'
+			},
+			source: {
+				elem: 'input',
+				type: 'url',
+				label: 'Source URL'
+			},
+			width: {
+				elem: 'input',
+				type: 'number',
+				label: 'Width',
+				'default': 100,
+				'units': '%',
+				hidden: true
+			},
+			height: {
+				elem: 'input',
+				type: 'number',
+				label: 'Height',
+				'default': 100,
+				'units': '%',
+				hidden: true
+			},
+			top: {
+				elem: 'input',
+				type: 'number',
+				label: 'Top',
+				'default': 0,
+				'units': '%',
+				hidden: true
+			},
+			left: {
+				elem: 'input',
+				type: 'number',
+				label: 'Left',
+				'default': 0,
+				'units': '%',
+				hidden: true
+			},
+			from: {
+				elem: 'input',
+				type: 'number',
+				label: 'In',
+				'default': 0
+			},
+			to: {
+				elem: 'input',
+				type: 'number',
+				label: 'Out',
+				'default': 10
+			},
+			volume: {
+				elem: 'input',
+				type: 'number',
+				label: 'Volume',
+				'default': 1,
+				min: 0,
+				max: 1,
+				step: 0.01
+			},
+			zindex: {
+				hidden: true
+			}
+		},
 		incompatible: function() {
 			return !!navigator.userAgent.match(/iP(od|ad|hone)/i) &&
 				'Browser is unable to play multiple simultaneous media.';
 		}
 	});
-}(Popcorn));
+}(this, this.Popcorn));
