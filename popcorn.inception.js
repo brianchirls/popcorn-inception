@@ -115,6 +115,11 @@
 			}
 		}
 
+		function mainVideoVolume() {
+			popcorn.volume(me.volume());
+			popcorn.muted(me.muted());
+		}
+
 		if (!base.target) {
 			return;
 		}
@@ -258,14 +263,19 @@
 
 		return {
 			start: function(event, options) {
-				var time;
 				active = true;
 				base.addClass(container, 'active');
 
-				if (options.sync) {
+				if (sync) {
 					me.on('pause', mainVideoPaused);
 					me.on('seeking', mainVideoSeeking);
 					me.on('seeked', mainVideoSeeked);
+				}
+
+				if (options.volume === true) {
+					mainVideoVolume();
+				} else if (!isNaN(options.volume) && options.volume !== false) {
+					popcorn.volume(options.volume);
 				}
 
 				for (i in Popcorn.registryByName) {
@@ -298,6 +308,7 @@
 				me.off('seeked', mainVideoSeeked);
 			},
 			_teardown: function(event, options) {
+				me.off('volumechange', mainVideoVolume);
 				popcorn.destroy();
 			}
 		};
