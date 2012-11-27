@@ -171,6 +171,17 @@
 
 		popcornOptions = Popcorn.extend({}, me.options);
 		Popcorn.extend(popcornOptions, options.options || {});
+		if (popcornOptions.defaults) {
+			// https://webmademovies.lighthouseapp.com/projects/63272-popcornjs/tickets/1374-popcorn-init-should-deep-copy-optionsdefaults
+			(function() {
+				var obj = {};
+
+				Popcorn.forEach(popcornOptions.defaults, function(def, plugin) {
+					obj[plugin] = Popcorn.extend({}, popcornOptions.defaults[plugin]);
+				});
+				popcornOptions.defaults = obj;
+			}());
+		}
 
 		//use Popcorn.smart if available
 		mediaType = options.type || guessMediaType(sources) || '';
