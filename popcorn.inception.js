@@ -16,7 +16,8 @@
 			'ogg': 'audio',
 			'aac': 'audio',
 			'wav': 'audio'
-		};
+		},
+		smart;
 
 	function guessMediaType(sources) {
 		var ext, i;
@@ -34,11 +35,42 @@
 		return false;
 	}
 
+	smart = function(div, sources, popcornOptions) {
+		var i, j, wrapper,
+			media;
+
+		if (!Popcorn.isArray(sources)) {
+			sources = [sources];
+		}
+		for (i in Popcorn) {
+			wrapper = Popcorn[i];
+			if (wrapper && wrapper._canPlaySrc &&
+				wrapper !== Popcorn.HTMLVideoElement &&
+				wrapper !== Popcorn.HTMLAudioElement &&
+				typeof wrapper._canPlaySrc === 'function') {
+
+				if (wrapper._canPlaySrc(sources)) {
+					media = wrapper(div);
+					media.src = sources;
+					return media;
+				}
+				for (j = 0; j < sources.length; j++) {
+					if (wrapper._canPlaySrc(sources[j])) {
+						media = wrapper(div);
+						media.src = sources[j];
+						return media;
+					}
+				}
+			}
+		}
+	};
+
 	Popcorn.basePlugin('inception', function (options, base) {
 		var me = this,
 			popcorn,
 			media,
 			sync = options.sync === undefined ? true : options.sync,
+			paused,
 			container, div, doc, iframe,
 			sources,
 			mediaType,
@@ -76,7 +108,7 @@
 			}
 
 			//if options.sync, advance to appropriate time
-			if (options.sync) {
+			if (sync && !paused) {
 				time = me.currentTime() - options.start + from;
 			}
 			if (time < to) {
@@ -100,7 +132,7 @@
 			popcorn.pause();
 
 			//if options.sync, advance to appropriate time
-			if (options.sync) {
+			if (sync && !paused) {
 				time = me.currentTime() - options.start + from;
 			}
 			if (time >= to) {
@@ -127,7 +159,9 @@
 		//todo: don't require options.source if null player is available
 		sources = base.toArray(options.source, /[\n\r]+/);
 		if (!sources || !sources.length) {
-			return;
+			if (!Popcorn.HTMLNullVideoElement) {
+				return;
+			}
 		}
 
 		//todo: if no sources pass canPlayType, return null
@@ -183,13 +217,15 @@
 			}());
 		}
 
-		//use Popcorn.smart if available
+		if (!sources || !sources.length) {
+			//todo: handle missing end and/or from/to
+			sources = ['#t=0,' + (options.end - options.start)];
+		}
+
 		mediaType = options.type || guessMediaType(sources) || '';
 		mediaType = mediaType.toLowerCase();
-		if (mediaType !== 'video' && mediaType !== 'audio' && Popcorn.smart) {
-			popcorn = Popcorn.smart(div, sources, popcornOptions);
-			media = popcorn.media;
-		} else {
+		media = smart(div, sources);
+		if (!media) {
 			media = doc.createElement(mediaType || 'video');
 			media.setAttribute('preload', 'auto');
 			Popcorn.forEach(sources, function(url) {
@@ -207,8 +243,8 @@
 				media.setAttribute('poster', options.poster);
 			}
 			div.appendChild(media);
-			popcorn = Popcorn(media, popcornOptions);
 		}
+		popcorn = Popcorn(media, popcornOptions);
 
 		options.popcorn = popcorn;
 
@@ -233,12 +269,28 @@
 			});
 		}
 
+		if (options.volume === true) {
+			mainVideoVolume();
+			me.on('volumechange', mainVideoVolume);
+		}
+
 		popcorn.on('loadedmetadata', function() {
 			to = Math.min(to, popcorn.duration());
 			to = Math.min(to, from + (options.end - options.start));
-		});
 
-		//todo: option to pause main video
+			//option to pause main video
+			if (options.pause) {
+				base.pause((options.pause === true || options.pause === 0) ? to : options.pause, {
+					timeFn: function() {
+						return popcorn.currentTime();
+					},
+					onPause: function() {
+						paused = true;
+					}
+				});
+			}
+
+		});
 
 		//set up popcorn events
 		if (options.events) {
@@ -302,6 +354,7 @@
 				var i;
 
 				active = false;
+				paused = false;
 				popcorn.pause();
 
 				//in case there are any lingering popcorn events
