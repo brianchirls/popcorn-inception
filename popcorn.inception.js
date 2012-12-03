@@ -35,7 +35,7 @@
 		return false;
 	}
 
-	smart = function(div, sources, popcornOptions) {
+	smart = function(div, sources) {
 		var i, j, wrapper,
 			media;
 
