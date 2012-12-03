@@ -74,12 +74,13 @@
 			container, div, doc, iframe,
 			sources,
 			mediaType,
-			i, events, evt, eventType,
 			from, to,
 			duration = Infinity,
 			popcornOptions,
 			targetTime,
-			active;
+			active,
+			optionEvents = {},
+			i;
 
 		function seek(time) {
 			function seekWhenReady() {
@@ -152,8 +153,99 @@
 			popcorn.muted(me.muted());
 		}
 
+		function setUpPopcornEvents(events) {
+			var id, i,
+				optionEvent, eventType,
+				eventList,
+				deleteQueue = [],
+				createQueue = [];
+
+			function findExisting(plugin, obj) {
+				var i, list = optionEvents[plugin];
+
+				if (!list) {
+					return false;
+				}
+
+				for (i in list) {
+					if (list[i] === obj) {
+						return i;
+					}
+				}
+
+				return false;
+			}
+
+			//list of old popcorn events to delete if not updated
+			Popcorn.forEach(optionEvents, function(list/*, plugin*/) {
+				var i;
+				for (i in list) {
+					deleteQueue.push(i);
+				}
+			});
+
+			if (Popcorn.isArray(events)) {
+				for (i = 0; i < events.length; i++) {
+					optionEvent = events[i];
+					eventType = optionEvent._type;
+					if (eventType && Popcorn.registryByName[eventType]) {
+						id = findExisting(eventType, optionEvent);
+						if (id) {
+							popcorn[eventType](id, optionEvent);
+							delete optionEvents[eventType][id];
+							deleteQueue.splice(deleteQueue.indexOf(id), 1);
+						} else {
+							if (!optionEvents[eventType]) {
+								optionEvents[eventType] = {};
+							}
+							createQueue.push({
+								plugin: eventType,
+								options: optionEvent
+							});
+						}
+					}
+				}
+			} else if (typeof events === 'object') {
+				for (eventType in events) {
+					if (Popcorn.registryByName[eventType]) {
+						if (!optionEvents[eventType]) {
+							optionEvents[eventType] = {};
+						}
+						eventList = events[eventType];
+						for (i = 0; i < eventList.length; i++) {
+							optionEvent = eventList[i];
+							id = findExisting(eventType, optionEvent);
+							if (id) {
+								popcorn[eventType](id, optionEvent);
+								delete optionEvents[eventType][id];
+								deleteQueue.splice(deleteQueue.indexOf(id), 1);
+							} else {
+								createQueue.push({
+									plugin: eventType,
+									options: optionEvent
+								});
+							}
+						}
+					}
+				}
+			}
+
+			while (deleteQueue.length) {
+				id = deleteQueue.shift();
+				popcorn.removeTrackEvent(id);
+			}
+
+			while (createQueue.length) {
+				optionEvent = createQueue.shift();
+				popcorn[optionEvent.plugin](optionEvent.options);
+				id = popcorn.getLastTrackEventId();
+				optionEvents[optionEvent.plugin][id] = optionEvent.options;
+
+			}
+		}
+
 		if (!base.target) {
-			return;
+			base.target = document.body;
 		}
 
 		//todo: don't require options.source if null player is available
@@ -289,43 +381,23 @@
 					}
 				});
 			}
-
 		});
 
-		//set up popcorn events
-		if (options.events) {
-			for (i in Popcorn.registryByName) {
+		for (i in Popcorn.registryByName) {
+			if (Popcorn.registryByName.hasOwnProperty(i)) {
 				popcorn.defaults(i, {
 					target: div
 				});
 				popcorn.disable(i);
 			}
-
-			if (Popcorn.isArray(options.events)) {
-				for (i = 0; i < options.events.length; i++) {
-					evt = options.events[i];
-					eventType = evt._type;
-					if (eventType && Popcorn.registryByName[eventType]) {
-						evt = Popcorn.extend({}, evt);
-						delete evt._type;
-						popcorn[eventType](evt);
-					}
-				}
-			} else if (typeof options.events === 'object') {
-				for (eventType in options.events) {
-					if (Popcorn.registryByName[eventType]) {
-						events = options.events[eventType];
-						for (i = 0; i < events.length; i++) {
-							evt = events[i];
-							popcorn[eventType](evt);
-						}
-					}
-				}
-			}
 		}
+
+		setUpPopcornEvents(options.events);
 
 		return {
 			start: function(event, options) {
+				var i;
+
 				active = true;
 				base.addClass(container, 'active');
 
@@ -342,7 +414,9 @@
 				}
 
 				for (i in Popcorn.registryByName) {
-					popcorn.enable(i);
+					if (Popcorn.registryByName.hasOwnProperty(i)) {
+						popcorn.enable(i);
+					}
 				}
 
 				me.on('play', playOnStart);
@@ -350,7 +424,7 @@
 					playOnStart();
 				}
 			},
-			end: function(event, options) {
+			end: function() {
 				var i;
 
 				active = false;
@@ -359,7 +433,9 @@
 
 				//in case there are any lingering popcorn events
 				for (i in Popcorn.registryByName) {
-					popcorn.disable(i);
+					if (Popcorn.registryByName.hasOwnProperty(i)) {
+						popcorn.disable(i);
+					}
 				}
 
 				me.off('play', playOnStart);
@@ -371,7 +447,34 @@
 				me.off('seeking', mainVideoSeeking);
 				me.off('seeked', mainVideoSeeked);
 			},
-			_teardown: function(event, options) {
+			_update: function(options, changes) {
+				var id;
+				//todo: update source here, adjust durations
+
+				if ('events' in changes) {
+					//just start from scratch
+					/*
+					for (id in optionEvents) {
+						popcorn.removeTrackEvent(id);
+						delete optionEvents[id];
+					}
+					*/
+					setUpPopcornEvents(changes.events);
+				}
+
+				if ('volume' in changes && changes.volume !== options.volume) {
+					if (changes.volume === true) {
+						me.on('volumechange', mainVideoVolume);
+						mainVideoVolume();
+					} else {
+						me.off('volumechange', mainVideoVolume);
+						if (active && !isNaN(changes.volume) && changes.volume !== false) {
+							popcorn.volume(options.volume);
+						}
+					}
+				}
+			},
+			_teardown: function() {
 				me.off('volumechange', mainVideoVolume);
 				popcorn.destroy();
 			}
