@@ -17,7 +17,8 @@
 			'aac': 'audio',
 			'wav': 'audio'
 		},
-		smart;
+		smart,
+		findWrapper;
 
 	function guessMediaType(sources) {
 		var ext, i;
@@ -34,6 +35,31 @@
 
 		return false;
 	}
+
+	findWrapper = function(sources) {
+		var i, j, wrapper;
+
+		if (!Popcorn.isArray(sources)) {
+			sources = [sources];
+		}
+		for (i in Popcorn) {
+			wrapper = Popcorn[i];
+			if (wrapper && wrapper._canPlaySrc &&
+				wrapper !== Popcorn.HTMLVideoElement &&
+				wrapper !== Popcorn.HTMLAudioElement &&
+				typeof wrapper._canPlaySrc === 'function') {
+
+				if (wrapper._canPlaySrc(sources)) {
+					return i;
+				}
+				for (j = 0; j < sources.length; j++) {
+					if (wrapper._canPlaySrc(sources[j])) {
+						return i;
+					}
+				}
+			}
+		}
+	};
 
 	smart = function(div, sources) {
 		var i, j, wrapper,
@@ -80,7 +106,8 @@
 			targetTime,
 			active,
 			optionEvents = {},
-			i;
+			i,
+			sourceParams, mediaWrapperProto;
 
 		function seek(time) {
 			function seekWhenReady() {
@@ -151,6 +178,126 @@
 		function mainVideoVolume() {
 			popcorn.volume(me.volume());
 			popcorn.muted(me.muted());
+		}
+
+		function updateSources(sources) {
+			var newSource = false,
+				newMedia = false,
+				isNative = false,
+				newWrapperProto,
+				i, node;
+
+			//todo: don't require options.source if null player is unavailable
+			sources = base.toArray(sources);
+			if (!sources || !sources.length) {
+				//todo: handle missing end and/or from/to
+				sources = ['#t=0,' + (options.end - options.start)];
+			}
+
+			newWrapperProto = findWrapper(sources);
+			if (!newWrapperProto) {
+				newWrapperProto = options.type || guessMediaType(sources) || '';
+				newWrapperProto = newWrapperProto.toLowerCase() || 'video';
+				isNative = true;
+			}
+
+			if (sourceParams && sourceParams.length === sources.length) {
+				for (i = 0; i < sources.length; i++) {
+					if (sources[i] !== sourceParams[i]) {
+						newSource = true;
+						break;
+					}
+				}
+			} else {
+				newSource = true;
+			}
+
+			if (!newSource) {
+				return;
+			}
+
+			if (newWrapperProto !== mediaWrapperProto || !media) {
+				//completely new media type
+				newMedia = true;
+				if (sourceParams) {
+					//clean out old sources and/or media
+					if (media) {
+						media.src = '';
+						if (media._util && typeof media._util.destroy === 'function') {
+							media._util.destroy();
+						}
+						if (media.parentNode && media.parentNode.removeChild) {
+							try {
+								media.parentNode.removeChild(media);
+							} catch (e) {
+							}
+						}
+					}
+
+					//gonna need a new popcorn instance
+					popcorn.destroy();
+					popcorn = false;
+					options.popcorn = false;
+					optionEvents = {};
+				}
+
+				media = smart(div, sources);
+				if (!media) {
+					media = doc.createElement(newWrapperProto);
+					media.setAttribute('preload', 'auto');
+					if (options.poster) {
+						media.setAttribute('poster', options.poster);
+					}
+					div.appendChild(media);
+				}
+				mediaWrapperProto = newWrapperProto;
+
+			} else {
+				if (media.childNodes && (media.tagName === 'VIDEO' || media.tagName === 'AUDIO')) {
+					for (i = media.childNodes.length - 1; i >= 0; i--) {
+						node = media.childNodes[i];
+						if (node.tagName === 'source') {
+							media.removeChild(node);
+						}
+					}
+				}
+			}
+
+			if (isNative) {
+				Popcorn.forEach(sources, function(url) {
+					var source = doc.createElement('source');
+
+					url += '#t=' + from;
+					if (to < Infinity) {
+						url += ',' + to;
+					}
+
+					source.setAttribute('src', url);
+					media.appendChild(source);
+				});
+			} else if (!newMedia) {
+				media.src = sources[0];
+			}
+
+			sourceParams = sources;
+		}
+
+		function updatePopcorn() {
+			var i;
+
+			popcorn = Popcorn(media, popcornOptions);
+			options.popcorn = popcorn;
+
+			for (i in Popcorn.registryByName) {
+				if (Popcorn.registryByName.hasOwnProperty(i)) {
+					popcorn.defaults(i, {
+						target: div
+					});
+					if (!active) {
+						popcorn.disable(i);
+					}
+				}
+			}
 		}
 
 		function setUpPopcornEvents(events) {
@@ -248,16 +395,6 @@
 			base.target = document.body;
 		}
 
-		//todo: don't require options.source if null player is available
-		sources = base.toArray(options.source, /[\n\r]+/);
-		if (!sources || !sources.length) {
-			if (!Popcorn.HTMLNullVideoElement) {
-				return;
-			}
-		}
-
-		//todo: if no sources pass canPlayType, return null
-
 		//todo: add stylesheet with basePlugin
 		if (!styleSheet) {
 			styleSheet = document.createElement('style');
@@ -309,16 +446,17 @@
 			}());
 		}
 
+		/*
 		if (!sources || !sources.length) {
 			//todo: handle missing end and/or from/to
 			sources = ['#t=0,' + (options.end - options.start)];
 		}
 
-		mediaType = options.type || guessMediaType(sources) || '';
-		mediaType = mediaType.toLowerCase();
 		media = smart(div, sources);
+		mediaType = options.type || guessMediaType(sources) || '';
+		mediaType = mediaType.toLowerCase() || 'video';
 		if (!media) {
-			media = doc.createElement(mediaType || 'video');
+			media = doc.createElement(mediaType);
 			media.setAttribute('preload', 'auto');
 			Popcorn.forEach(sources, function(url) {
 				var source = doc.createElement('source');
@@ -335,10 +473,13 @@
 				media.setAttribute('poster', options.poster);
 			}
 			div.appendChild(media);
+			mediaWrapperProto = mediaType;
+		} else {
+			mediaWrapperProto = findWrapper(sources);
 		}
-		popcorn = Popcorn(media, popcornOptions);
-
-		options.popcorn = popcorn;
+		*/
+		updateSources(sources);
+		updatePopcorn();
 
 		if (options.controls) {
 			media.controls = true;
@@ -382,15 +523,6 @@
 				});
 			}
 		});
-
-		for (i in Popcorn.registryByName) {
-			if (Popcorn.registryByName.hasOwnProperty(i)) {
-				popcorn.defaults(i, {
-					target: div
-				});
-				popcorn.disable(i);
-			}
-		}
 
 		setUpPopcornEvents(options.events);
 
@@ -448,18 +580,29 @@
 				me.off('seeked', mainVideoSeeked);
 			},
 			_update: function(options, changes) {
-				var id;
-				//todo: update source here, adjust durations
+				var newPopcorn;
+
+				//todo: update from/to
+
+				//update source, adjust durations
+				if ('source' in changes) {
+					updateSources(changes.source);
+				}
+
+				//todo: or new popcornOptions
+				if (!popcorn) {
+					updatePopcorn();
+					newPopcorn = true;
+				}
+
+				if ('controls' in changes) {
+					media.controls = !!changes.controls;
+				}
 
 				if ('events' in changes) {
-					//just start from scratch
-					/*
-					for (id in optionEvents) {
-						popcorn.removeTrackEvent(id);
-						delete optionEvents[id];
-					}
-					*/
 					setUpPopcornEvents(changes.events);
+				} else if (newPopcorn) {
+					setUpPopcornEvents(options.events);
 				}
 
 				if ('volume' in changes && changes.volume !== options.volume) {
