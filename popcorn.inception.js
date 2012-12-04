@@ -446,39 +446,7 @@
 			}());
 		}
 
-		/*
-		if (!sources || !sources.length) {
-			//todo: handle missing end and/or from/to
-			sources = ['#t=0,' + (options.end - options.start)];
-		}
-
-		media = smart(div, sources);
-		mediaType = options.type || guessMediaType(sources) || '';
-		mediaType = mediaType.toLowerCase() || 'video';
-		if (!media) {
-			media = doc.createElement(mediaType);
-			media.setAttribute('preload', 'auto');
-			Popcorn.forEach(sources, function(url) {
-				var source = doc.createElement('source');
-
-				url += '#t=' + from;
-				if (to < Infinity) {
-					url += ',' + to;
-				}
-
-				source.setAttribute('src', url);
-				media.appendChild(source);
-			});
-			if (options.poster) {
-				media.setAttribute('poster', options.poster);
-			}
-			div.appendChild(media);
-			mediaWrapperProto = mediaType;
-		} else {
-			mediaWrapperProto = findWrapper(sources);
-		}
-		*/
-		updateSources(sources);
+		updateSources(options.source);
 		updatePopcorn();
 
 		if (options.controls) {
