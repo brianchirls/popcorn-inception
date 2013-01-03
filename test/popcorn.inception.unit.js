@@ -66,7 +66,7 @@
 				newMedia = options.popcorn.media;
 			}
 		});
-		ok(media && media instanceof window.HTMLVideoElement, 'Media changed to different type');
+		ok(newMedia && newMedia instanceof window.HTMLVideoElement, 'Media changed to different type');
 
 		popcorn.destroy();
 	});
