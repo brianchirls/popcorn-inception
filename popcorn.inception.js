@@ -301,7 +301,7 @@
 		}
 
 		function setUpPopcornEvents(events) {
-			var id, i,
+			var id, i, j,
 				optionEvent, eventType,
 				eventList,
 				deleteQueue = [],
@@ -340,7 +340,10 @@
 						if (id) {
 							popcorn[eventType](id, optionEvent);
 							delete optionEvents[eventType][id];
-							deleteQueue.splice(deleteQueue.indexOf(id), 1);
+							j = deleteQueue.indexOf(id);
+							if (j >= 0) {
+								deleteQueue.splice(j, 1);
+							}
 						} else {
 							if (!optionEvents[eventType]) {
 								optionEvents[eventType] = {};
@@ -365,7 +368,10 @@
 							if (id) {
 								popcorn[eventType](id, optionEvent);
 								delete optionEvents[eventType][id];
-								deleteQueue.splice(deleteQueue.indexOf(id), 1);
+								j = deleteQueue.indexOf(id);
+								if (j >= 0) {
+									deleteQueue.splice(j, 1);
+								}
 							} else {
 								createQueue.push({
 									plugin: eventType,

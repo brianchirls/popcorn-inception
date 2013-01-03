@@ -31,11 +31,11 @@
 	</head>
 	<body>
 		<div id="video-container">
-			<video id="video" width="800" height="450" preload controls>
-				<source src="video/demo.webm" type="video/webm" />
-				<source src="http://videos.mozilla.org/serv/webmademovies/popcornsite.webm" type="video/webm" />
+			<video id="video" width="800" height="450" preload>
 				<source src="http://videos.mozilla.org/serv/webmademovies/popcornsite.mp4" type="video/mp4" />
+				<source src="http://videos.mozilla.org/serv/webmademovies/popcornsite.webm" type="video/webm" />
 				<source src="http://videos.mozilla.org/serv/webmademovies/popcornsite.ogv" type="video/ogg" />
+				<source src="video/demo.webm" type="video/webm" />
 			</video>
 		</div>
 		<script type="text/javascript" src="lib/popcorn.js"></script>
@@ -64,14 +64,16 @@
 			]
 
 			popcorn.defaults('inception', {
-				target: 'video-container'
-			})
+				target: 'video-container',
+				volume: true
+			});
 
 			popcorn.inception({
 				start: 1,
 				end: 3.5,
 				source: atultroll,
 				sync: true,
+				//pause: true,
 				from: 0.5,
 				to: 3,
 				top: '20%',
