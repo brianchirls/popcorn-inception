@@ -43,18 +43,20 @@
 			sources = [sources];
 		}
 		for (i in Popcorn) {
-			wrapper = Popcorn[i];
-			if (wrapper && wrapper._canPlaySrc &&
-				wrapper !== Popcorn.HTMLVideoElement &&
-				wrapper !== Popcorn.HTMLAudioElement &&
-				typeof wrapper._canPlaySrc === 'function') {
+			if (Popcorn.hasOwnProperty(i)) {
+				wrapper = Popcorn[i];
+				if (wrapper && wrapper._canPlaySrc &&
+					wrapper !== Popcorn.HTMLVideoElement &&
+					wrapper !== Popcorn.HTMLAudioElement &&
+					typeof wrapper._canPlaySrc === 'function') {
 
-				if (wrapper._canPlaySrc(sources)) {
-					return i;
-				}
-				for (j = 0; j < sources.length; j++) {
-					if (wrapper._canPlaySrc(sources[j])) {
+					if (wrapper._canPlaySrc(sources)) {
 						return i;
+					}
+					for (j = 0; j < sources.length; j++) {
+						if (wrapper._canPlaySrc(sources[j])) {
+							return i;
+						}
 					}
 				}
 			}
@@ -69,22 +71,24 @@
 			sources = [sources];
 		}
 		for (i in Popcorn) {
-			wrapper = Popcorn[i];
-			if (wrapper && wrapper._canPlaySrc &&
-				wrapper !== Popcorn.HTMLVideoElement &&
-				wrapper !== Popcorn.HTMLAudioElement &&
-				typeof wrapper._canPlaySrc === 'function') {
+			if (Popcorn.hasOwnProperty(i)) {
+				wrapper = Popcorn[i];
+				if (wrapper && wrapper._canPlaySrc &&
+					wrapper !== Popcorn.HTMLVideoElement &&
+					wrapper !== Popcorn.HTMLAudioElement &&
+					typeof wrapper._canPlaySrc === 'function') {
 
-				if (wrapper._canPlaySrc(sources)) {
-					media = wrapper(div);
-					media.src = sources;
-					return media;
-				}
-				for (j = 0; j < sources.length; j++) {
-					if (wrapper._canPlaySrc(sources[j])) {
+					if (wrapper._canPlaySrc(sources)) {
 						media = wrapper(div);
-						media.src = sources[j];
+						media.src = sources;
 						return media;
+					}
+					for (j = 0; j < sources.length; j++) {
+						if (wrapper._canPlaySrc(sources[j])) {
+							media = wrapper(div);
+							media.src = sources[j];
+							return media;
+						}
 					}
 				}
 			}
@@ -98,15 +102,12 @@
 			sync = options.sync === undefined ? true : options.sync,
 			paused,
 			container, div, doc, iframe,
-			sources,
-			mediaType,
 			from, to,
 			duration = Infinity,
 			popcornOptions,
 			targetTime,
 			active,
 			optionEvents = {},
-			i,
 			sourceParams, mediaWrapperProto;
 
 		function seek(time) {
@@ -327,7 +328,9 @@
 			Popcorn.forEach(optionEvents, function(list/*, plugin*/) {
 				var i;
 				for (i in list) {
-					deleteQueue.push(i);
+					if (list.hasOwnProperty(i)) {
+						deleteQueue.push(i);
+					}
 				}
 			});
 
@@ -357,7 +360,7 @@
 				}
 			} else if (typeof events === 'object') {
 				for (eventType in events) {
-					if (Popcorn.registryByName[eventType]) {
+					if (events.hasOwnProperty(eventType) && Popcorn.registryByName[eventType]) {
 						if (!optionEvents[eventType]) {
 							optionEvents[eventType] = {};
 						}
@@ -432,8 +435,8 @@
 			doc = document;
 		}
 
-		from = options.from && Math.max(Popcorn.util.toSeconds(options.from), 0) || 0;
-		to = options.to && Popcorn.util.toSeconds(options.to) || Infinity;
+		from = (options.from && Math.max(Popcorn.util.toSeconds(options.from), 0)) || 0;
+		to = (options.to && Popcorn.util.toSeconds(options.to)) || Infinity;
 		if (to < from) {
 			to = Infinity;
 		}
@@ -559,7 +562,7 @@
 				//todo: update from/to
 
 				//update source, adjust durations
-				if ('source' in changes) {
+				if (changes.hasOwnProperty('source')) {
 					updateSources(changes.source);
 				}
 
@@ -569,17 +572,17 @@
 					newPopcorn = true;
 				}
 
-				if ('controls' in changes) {
+				if (changes.hasOwnProperty('controls')) {
 					media.controls = !!changes.controls;
 				}
 
-				if ('events' in changes) {
+				if (changes.hasOwnProperty('events')) {
 					setUpPopcornEvents(changes.events);
 				} else if (newPopcorn) {
 					setUpPopcornEvents(options.events);
 				}
 
-				if ('volume' in changes && changes.volume !== options.volume) {
+				if (changes.hasOwnProperty('volume') && changes.volume !== options.volume) {
 					if (changes.volume === true) {
 						me.on('volumechange', mainVideoVolume);
 						mainVideoVolume();
