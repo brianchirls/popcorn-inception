@@ -9,26 +9,112 @@
 			'webm': 'video',
 			'mp4': 'video',
 			'm4v': 'video',
-			'ogv': 'video',
-
+			'ogv': {
+				type: 'video',
+				ext: 'ogg'
+			},
 			'mp3': 'audio',
-			'oga': 'audio',
+			'oga': {
+				type: 'audio',
+				ext: 'ogg'
+			},
 			'ogg': 'audio',
 			'aac': 'audio',
-			'wav': 'audio'
+			'wav': 'audio',
+			'opus': 'audio'
 		},
 		smart,
-		findWrapper;
+		baseURI;
 
-	function guessMediaType(sources) {
-		var ext, i;
+	/*********************************************************************************
+	* parseUri 1.2.2
+	* http://blog.stevenlevithan.com/archives/parseuri
+	* (c) Steven Levithan <stevenlevithan.com>
+	* MIT License
+	*/
+	function parseUri (str) {
+		var	o   = parseUri.options,
+				m   = o.parser[o.strictMode ? "strict" : "loose"].exec(str),
+				uri = {},
+				i   = 14;
+
+		while (i--) {
+			uri[o.key[i]] = m[i] || "";
+		}
+
+		uri[o.q.name] = {};
+		uri[o.key[12]].replace(o.q.parser, function ($0, $1, $2) {
+			if ($1) {
+				uri[o.q.name][$1] = $2;
+			}
+		});
+
+		return uri;
+	}
+
+	parseUri.options = {
+		strictMode: false,
+		key: ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"],
+		q:   {
+			name:   "queryKey",
+			parser: /(?:^|&)([^&=]*)=?([^&]*)/g
+		},
+		parser: {
+			strict: /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/,
+			loose:  /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/)?((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/
+		}
+	};
+
+	function sourcesMatch(current, sources, from, to) {
+		var uri, i, j, source,
+			currentUri = parseUri(current),
+			path, split;
 
 		for (i = 0; i < sources.length; i++) {
-			ext = /\.([a-z]+)$/i.exec(sources[i]);
-			if (ext) {
-				ext = ext[1];
-				if (mediaTypes[ext]) {
-					return mediaTypes[ext];
+			source = sources[i];
+			if (current === source) {
+				return true;
+			}
+
+			if (source.indexOf('#') < 0) {
+				source += '#t=' + from;
+				if (to < Infinity) {
+					source += ',' + to;
+				}
+			}
+			if (current === source) {
+				return true;
+			}
+
+			if (!baseURI) {
+				baseURI = parseUri(document.baseURI);
+			}
+
+			uri = parseUri(source);
+			if (!uri.host &&
+				(!uri.protocol || uri.protocol === currentUri.protocol) &&
+				(!currentUri.anchor || uri.anchor === currentUri.anchor) &&
+				uri.queryKey === currentUri.queryKey) {
+
+				split = uri.path.split('/');
+
+				if (split.length && split[0] === '') {
+					if (uri.path === currentUri.path) {
+						return true;
+					}
+				} else {
+					path = baseURI.path.split('/');
+					path.pop();
+					for (j = 0; j < split.length; j++) {
+						if (split[j] === '..') {
+							path.pop();
+						} else if (split[j] !== '.') {
+							path.push(split[j]);
+						}
+					}
+					if (path.join('/') === currentUri.path) {
+						return true;
+					}
 				}
 			}
 		}
@@ -36,59 +122,35 @@
 		return false;
 	}
 
-	findWrapper = function(sources) {
-		var i, j, wrapper;
-
-		if (!Popcorn.isArray(sources)) {
-			sources = [sources];
-		}
-		for (i in Popcorn) {
-			if (Popcorn.hasOwnProperty(i)) {
-				wrapper = Popcorn[i];
-				if (wrapper && wrapper._canPlaySrc &&
-					wrapper !== Popcorn.HTMLVideoElement &&
-					wrapper !== Popcorn.HTMLAudioElement &&
-					typeof wrapper._canPlaySrc === 'function') {
-
-					if (wrapper._canPlaySrc(sources)) {
-						return i;
-					}
-					for (j = 0; j < sources.length; j++) {
-						if (wrapper._canPlaySrc(sources[j])) {
-							return i;
-						}
-					}
-				}
-			}
-		}
-	};
-
-	smart = function(div, sources) {
+	smart = function(div, sources, preferred) {
 		var i, j, wrapper,
-			media;
+			media,
+			keys = Object.keys(Popcorn);
+
+		if (preferred && Popcorn.hasOwnProperty(preferred)) {
+			keys.unshift(preferred);
+		}
 
 		if (!Popcorn.isArray(sources)) {
 			sources = [sources];
 		}
-		for (i in Popcorn) {
-			if (Popcorn.hasOwnProperty(i)) {
-				wrapper = Popcorn[i];
-				if (wrapper && wrapper._canPlaySrc &&
-					wrapper !== Popcorn.HTMLVideoElement &&
-					wrapper !== Popcorn.HTMLAudioElement &&
-					typeof wrapper._canPlaySrc === 'function') {
+		for (i = 0; i < keys.length; i++) {
+			wrapper = Popcorn[keys[i]];
+			if (wrapper && wrapper._canPlaySrc &&
+				wrapper !== Popcorn.HTMLVideoElement &&
+				wrapper !== Popcorn.HTMLAudioElement &&
+				typeof wrapper._canPlaySrc === 'function') {
 
-					if (wrapper._canPlaySrc(sources)) {
+				if (wrapper._canPlaySrc(sources)) {
+					media = wrapper(div);
+					media.src = sources;
+					return media;
+				}
+				for (j = 0; j < sources.length; j++) {
+					if (wrapper._canPlaySrc(sources[j])) {
 						media = wrapper(div);
-						media.src = sources;
+						media.src = sources[j];
 						return media;
-					}
-					for (j = 0; j < sources.length; j++) {
-						if (wrapper._canPlaySrc(sources[j])) {
-							media = wrapper(div);
-							media.src = sources[j];
-							return media;
-						}
 					}
 				}
 			}
@@ -182,11 +244,62 @@
 		}
 
 		function updateSources(sources) {
-			var newSource = false,
-				newMedia = false,
-				isNative = false,
-				newWrapperProto,
-				i, node;
+			var newWrapperProto,
+				mediaType,
+				mimeType,
+				i, node,
+				src,
+				extensions = {};
+
+			function getExtension(source) {
+				var ext = extensions[source];
+				if (ext) {
+					return ext;
+				}
+				ext = /\.([a-z]+)(\?|#|$)/i.exec(source);
+				ext = ext && ext[1] || '';
+				extensions[source] = ext;
+				return ext;
+			}
+
+			function getMimeType(source) {
+				var ext = getExtension(source),
+					t = mediaTypes[ext];
+
+				return t && (t.type ? t.type + '/' + t.ext : t + '/' + ext) || '';
+			}
+
+			function loadSources(media, sources, mimeType, force) {
+				var node, i;
+				if (mimeType && media.canPlayType(mimeType)) {
+					for (i = 0; i < sources.length; i++) {
+						src = sources[i];
+						node = document.createElement('source');
+						node.setAttribute('src', src);
+						node.setAttribute('type', mimeType);
+						media.appendChild(node);
+					}
+				} else if (!mimeType || force) {
+					for (i = 0; i < sources.length; i++) {
+						src = sources[i];
+
+						mimeType = getMimeType(src);
+						if ((!mimeType && force) || (mimeType && media.canPlayType(mimeType))) {
+							node = document.createElement('source');
+							node.setAttribute('src', src);
+							if (mimeType) {
+								node.setAttribute('type', mimeType);
+							}
+							media.appendChild(node);
+						}
+					}
+				}
+				if (node) {
+					media.load();
+					return true;
+				}
+				return false;
+			}
 
 			//todo: don't require options.source if null player is unavailable
 			sources = base.toArray(sources);
@@ -195,92 +308,124 @@
 				sources = ['#t=0,' + (options.end - options.start)];
 			}
 
-			newWrapperProto = findWrapper(sources);
-			if (!newWrapperProto) {
-				newWrapperProto = options.type || guessMediaType(sources) || '';
-				newWrapperProto = newWrapperProto.toLowerCase() || 'video';
-				isNative = true;
-			}
-
-			if (sourceParams && sourceParams.length === sources.length) {
-				for (i = 0; i < sources.length; i++) {
-					if (sources[i] !== sourceParams[i]) {
-						newSource = true;
-						break;
-					}
+			if (options.mediaType && typeof options.mediaType === 'string') {
+				if (Popcorn[options.mediaType] && Popcorn[options.mediaType]._canPlaySrc) {
+					newWrapperProto = options.mediaType;
 				}
-			} else {
-				newSource = true;
+				mediaType = options.mediaType.toLowerCase().split('/');
+				if (mediaType.length > 1) {
+					mimeType = mediaType[0] + '/' + mediaType[1];
+					mediaType = mediaType[0];
+				} else {
+					mediaType = options.mediaType;
+				}
 			}
 
-			if (!newSource) {
-				return;
-			}
+			//first see if we can play with an existing player
+			if (media && (!newWrapperProto || mediaWrapperProto === newWrapperProto)) {
+				//try to keep using current media src if possible
+				if (media.currentSrc && sourcesMatch(media.currentSrc, sources, from, to)) {
+					//source is the same as it was. move along
+					return;
+				}
 
-			if (newWrapperProto !== mediaWrapperProto || !media) {
-				//completely new media type
-				newMedia = true;
-				if (sourceParams) {
-					//clean out old sources and/or media
-					if (media) {
-						media.src = '';
-						if (media._util && typeof media._util.destroy === 'function') {
-							media._util.destroy();
-						}
-						if (media.parentNode && media.parentNode.removeChild) {
-							try {
-								media.parentNode.removeChild(media);
-							} catch (e) {
-							}
+				if (mediaWrapperProto && media._canPlaySrc &&
+					!(newWrapperProto || newWrapperProto === mediaWrapperProto)) {
+
+					for (i = 0; i < sources.length; i++) {
+						src = sources[i];
+						if (media._canPlaySrc(src)) {
+							media.src = src;
+							sourceParams = sources;
+							return;
 						}
 					}
-
-					//gonna need a new popcorn instance
-					popcorn.destroy();
-					popcorn = false;
-					options.popcorn = false;
-					optionEvents = {};
-				}
-
-				media = smart(div, sources);
-				if (!media) {
-					media = doc.createElement(newWrapperProto);
-					media.setAttribute('preload', 'auto');
-					if (options.poster) {
-						media.setAttribute('poster', options.poster);
-					}
-					div.appendChild(media);
-				}
-				mediaWrapperProto = newWrapperProto;
-
-			} else {
-				if (media.childNodes && (media.tagName === 'VIDEO' || media.tagName === 'AUDIO')) {
-					for (i = media.childNodes.length - 1; i >= 0; i--) {
+				} else if (media.canPlayType) { //native
+					//clear out old sources before adding new ones
+					for (i = 0; i < media.childNodes.length; i++) {
 						node = media.childNodes[i];
-						if (node.tagName === 'source') {
+						if (node.tagName === 'SOURCE') {
 							media.removeChild(node);
 						}
 					}
+					media.removeAttribute('src');
+					if (loadSources(media, sources, mimeType)) {
+						return;
+					}
 				}
 			}
 
-			if (isNative) {
-				Popcorn.forEach(sources, function(url) {
-					var source = doc.createElement('source');
-
-					url += '#t=' + from;
-					if (to < Infinity) {
-						url += ',' + to;
-					}
-
-					source.setAttribute('src', url);
-					media.appendChild(source);
-				});
-			} else if (!newMedia) {
-				media.src = sources[0];
+			//old media did not work, so remove it
+			mediaWrapperProto = false;
+			if (media) {
+				media.src = '';
+				if (typeof media.load === 'function') {
+					media.load();
+				}
+				if (media._util && media._util.destroy) {
+					media._util.destroy();
+				}
+				if (media.parentNode) {
+					try {
+						media.parentNode.removeChild(media);
+					} catch (e) {}
+				}
+				media = null;
+			}
+			if (popcorn) {
+				//gonna need a new popcorn instance
+				popcorn.destroy();
+				popcorn = false;
+				options.popcorn = false;
+				optionEvents = {};
 			}
 
-			sourceParams = sources;
+
+			if (!mediaType) {
+				//guess media type from file extensions
+				for (i = 0; i < sources.length; i++) {
+					mediaType = mediaTypes[getExtension(sources[i])];
+					if (mediaType) {
+						if (mediaType.type) {
+							mediaType = mediaType.type;
+						}
+						break;
+					}
+				}
+			}
+
+			if (!mediaType || mediaType === 'audio' || mediaType === 'video') {
+				//if mime type is set explicitly or clear from file extensions,
+				//try to use native media elements
+				media = document.createElement(mediaType || 'video');
+				if (loadSources(media, sources, mimeType)) {
+					div.appendChild(media);
+				} else {
+					media = false;
+				}
+			}
+
+			if (!media) {
+				media = smart(div, sources, newWrapperProto);
+				if (media) {
+					mediaWrapperProto = media._eventNamespace.split('::')[0];
+				}
+			}
+			if (!media) {
+				media = document.createElement('video');
+				if (loadSources(media, sources, mimeType, true)) {
+					div.appendChild(media);
+				} else {
+					media = false;
+				}
+			}
+
+			if (media) {
+				media.preload = options.preload || 'auto';
+				if (options.poster) {
+					media.poster = options.poster;
+				}
+			}
 		}
 
 		function updatePopcorn() {
@@ -562,6 +707,9 @@
 				//todo: update from/to
 
 				//update source, adjust durations
+				if (changes.hasOwnProperty('mediaType')) {
+					options.mediaType = changes.mediaType;
+				}
 				if (changes.hasOwnProperty('source')) {
 					updateSources(changes.source);
 				}

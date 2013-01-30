@@ -68,6 +68,29 @@
 		});
 		ok(newMedia && newMedia instanceof window.HTMLVideoElement, 'Media changed to different type');
 
+		media = newMedia;
+		popcorn.inception(id, {
+			source: [
+				testsrc[0],
+				'dummy.mp4'
+			],
+			onUpdate: function(options) {
+				newMedia = options.popcorn.media;
+			}
+		});
+		ok(media === newMedia, 'Use same media if current source is included in new source array');
+		ok(media.firstChild === newMedia.firstChild, 'Use same source if current source is included in new source array');
+
+		media = newMedia;
+		popcorn.inception(id, {
+			source: testsrc,
+			onUpdate: function(options) {
+				newMedia = options.popcorn.media;
+			},
+			mediaType: 'HTMLVideojsVideoElement'
+		});
+		ok(newMedia && newMedia._util.type === 'Videojs', 'Media forced to different type');
+
 		popcorn.destroy();
 	});
 
@@ -121,9 +144,9 @@
 				popcorn.currentTime(0);
 				popcorn.destroy();
 				start();
-			}, 0);
+			}, 10);
 
-		}, 0);
+		}, 100);
 	});
 
 	test('Update events', function() {
